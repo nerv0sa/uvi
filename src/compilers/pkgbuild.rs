@@ -1,9 +1,6 @@
 // TODO: also stop redefining variables / maybe const would work here?
-// TODO: download all packages that have like 8 names in parenthesis (ghostty ghostty-terminfo)
 // TODO: new parse function that allows for newlines / cmake_options=(1 \n 2)
 // TODO: try out fakeroot stuff maybe
-// TODO: why do some pkgbuilds not have a pkgname wtf
-// TODO: ghostty downloading fails at 9 bytes????
 
 use crate::{download, run_command};
 use regex::Regex;
@@ -82,8 +79,6 @@ fn download_pkgbuild(
     // let formatted_prepare_fn = format_pkgbuild(prepare_fn, &content, src_dir_str);
     // TODO: run_commmand with this panics??
 
-    println!("{formatted_url}");
-
     let formatted_name: &str = formatted_url.rsplit_once("/").unwrap().1;
     let formatted_path = Path::new(src_dir_str).join(formatted_name);
 
@@ -112,6 +107,14 @@ fn make(pkgbuild_path: &Path, src_dir: &Path) {
     let result = parse(&content);
 
     let url: &str = &result.url.expect("Failed");
+
+    let pkg_depends = result
+        .variables
+        .get("deps")
+        .map(|s| s.as_str())
+        .unwrap_or("null");
+
+    println!("{pkg_depends}");
 
     let mut e_pkgname = result // conv to str slice and specify type
         .variables
