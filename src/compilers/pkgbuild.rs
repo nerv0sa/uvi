@@ -2,6 +2,8 @@
 // TODO: download all packages that have like 8 names in parenthesis (ghostty ghostty-terminfo)
 // TODO: new parse function that allows for newlines / cmake_options=(1 \n 2)
 // TODO: try out fakeroot stuff maybe
+// TODO: why do some pkgbuilds not have a pkgname wtf
+// TODO: ghostty downloading fails at 9 bytes????
 
 use crate::{download, run_command};
 use regex::Regex;
@@ -67,12 +69,20 @@ fn download_pkgbuild(
     //     .get("prepare")
     //     .unwrap_or(&pkg_error)
     //     .as_str();
+    let pkgbase = result
+        .variables
+        .get("pkgbase")
+        .map(|s| s.as_str())
+        .unwrap_or("null");
 
-    let formatted_url: String = format_pkgbuild(url, &content, src_dir_str, pkgname);
+    let formatted_url: String =
+        format_pkgbuild(url, &content, src_dir_str, pkgname).replace("$pkgbase", pkgbase); // TODO: FUCK THIS
     let formatted_pkg_fn: String = format_pkgbuild(pkg_fn, &content, src_dir_str, pkgname);
     let formatted_build_fn: String = format_pkgbuild(build_fn, &content, src_dir_str, pkgname);
     // let formatted_prepare_fn = format_pkgbuild(prepare_fn, &content, src_dir_str);
     // TODO: run_commmand with this panics??
+
+    println!("{formatted_url}");
 
     let formatted_name: &str = formatted_url.rsplit_once("/").unwrap().1;
     let formatted_path = Path::new(src_dir_str).join(formatted_name);
@@ -103,13 +113,26 @@ fn make(pkgbuild_path: &Path, src_dir: &Path) {
 
     let url: &str = &result.url.expect("Failed");
 
-    let e_pkgname = result // conv to str slice and specify type
+    let mut e_pkgname = result // conv to str slice and specify type
         .variables
         .get("pkgname")
         .map(|s| s.as_str())
-        .unwrap_or("null n")
+        .unwrap_or("null")
         .replace(")", "") // TODO: fix this
         .replace("(", "");
+
+    //TODO: use if let some when u figure it out
+    if e_pkgname == "null" {
+        println!("=> \x1b[1mINFO:\x1b[0m Using pkgbase instead..");
+        e_pkgname = result
+            .variables
+            .get("pkgbase")
+            .map(|s| s.as_str())
+            .unwrap_or("no")
+            .to_string();
+    } else {
+        println!("=> \x1b[1mINFO:\x1b[0m Using pkgname..")
+    }
 
     let pkgnames: Vec<&str> = Vec::from_iter(e_pkgname.splitn(32usize, " ")); // TODO: resize;
 
@@ -120,7 +143,6 @@ fn make(pkgbuild_path: &Path, src_dir: &Path) {
 
         let pkg_fn_name;
         let fmt_name = format!("package_{formatted_pkgname}");
-        println!(" FORMATTED!");
 
         if let Some(_pkg) = result.functions.get("package") {
             println!("=> \x1b[32;1mSUC:\x1b[0m Found package()!");
@@ -161,11 +183,17 @@ fn format_archive(result: &ParseResult, pkgname: &str) -> String {
         .get("_name")
         .map(|s| s.as_str())
         .unwrap_or(pkgname);
+    let pkgbase: &str = result
+        .variables
+        .get("pkgbase")
+        .map(|s| s.as_str())
+        .unwrap_or(pkgname);
 
     let formatted: String = archive
         .replace("$pkgver", pkgver)
         .replace("$pkgname", pkgname)
         .replace("$_pkgname", _pkgname)
+        .replace("$pkgbase", pkgbase)
         .replace("(", "")
         .replace(")", ""); //TODO: replace with sed;
     formatted
@@ -217,6 +245,5 @@ fn format_pkgbuild(input: &str, content: &str, src_dir_str: &str, pkgname: &str)
         .replace("git+", "")
         .replace("(", ""); // TODO: could just use sed btw
     // .replace(")", "");
-
     formatted
 }

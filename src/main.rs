@@ -79,6 +79,10 @@ pub fn fetch_env(target_env: &str) -> PathBuf {
     current
 }
 
+fn add_pkg(pkg_name: &str) {
+    println!("hi!");
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // panic::set_hook(Box::new(|_| {
     //     println!(
@@ -144,6 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// DW
 pub fn download(url: &str, destination: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let response = blocking::get(url)?;
     let mut dest = File::create(destination)?;
