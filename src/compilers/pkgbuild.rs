@@ -87,8 +87,6 @@ fn download_pkgbuild(
     let formatted_name: &str = formatted_url.rsplit_once("/").unwrap().1;
     let formatted_path: PathBuf = Path::new(src_dir_str).join(formatted_name);
 
-    println!("URL: {}", formatted_url);
-
     match download(&formatted_url, &formatted_path) {
         Ok(_meow) => {
             // run_command(src_dir_str, "bash", &["-c", &formatted_prepare_fn]).expect("oopsies");
@@ -137,11 +135,9 @@ fn make(pkgbuild_path: &Path, src_dir: &Path) {
         println!("{}", e_pkgname);
     }
 
-    let pkgnames: Vec<&str> = Vec::from_iter(e_pkgname.splitn(0usize, " ")); // TODO: resize
+    let pkgnames: Vec<&str> = Vec::from_iter(e_pkgname.splitn(32usize, " ")); // TODO: resize, 0usize doesn't work.
 
-    println!("{:#?}", pkgnames); // empty
-
-    if pkgnames.is_empty() {
+    if !pkgnames.is_empty() {
         for i in pkgnames.iter() {
             let formatted_pkgname = format_pkgbuild(i, &content, src_dir_str, i);
 

@@ -1,9 +1,10 @@
 // TODO: Check if targetted download is > current, if so; ask user confirmation adn then replace
 // TODO: get pkg-conf working!!
-// TODO: --reponame (--void, --arch, --fedora)
+// TODO: prompkit
 
 use clap::Parser;
 use git2::Repository;
+
 use reqwest::blocking;
 use std::{
     env,
@@ -211,8 +212,8 @@ fn git_repo(
 
         if destination.exists() {
             println!(
-                "=> \x1b[31;1mERR:\x1b[0m Destination already exists..\n=> \x1b[33;1mTRY:\x1b[0m Deleting directory in 2 seconds.."
-            );
+                "=> \x1b[31;1mERR:\x1b[0m Destination already exists..\n=> \x1b[33;1mTRY:\x1b[0m Replace destination? [Y/n]"
+            ); // TODO: make work
 
             sleep(Duration::from_secs_f32(2.0));
 
