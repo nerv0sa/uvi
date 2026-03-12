@@ -2,7 +2,7 @@
 // TODO: new parse function that allows for newlines / cmake_options=(1 \n 2)
 // TODO: try out fakeroot stuff maybe
 
-use crate::{download, run_command};
+use crate::{download, fetch_env, run_command};
 use regex::Regex;
 use std::{
     collections::HashMap,
@@ -87,6 +87,16 @@ fn download_pkgbuild(
     let formatted_name: &str = formatted_url.rsplit_once("/").unwrap().1;
     let formatted_path: PathBuf = Path::new(src_dir_str).join(formatted_name);
 
+    let home_path = fetch_env("HOME");
+    let user_name = home_path
+        .to_str()
+        .expect("/tmp")
+        .rsplit_once("/")
+        .unwrap()
+        .1;
+    println!("{user_name}");
+    let formatted_user_name = format!("{user_name}:{user_name}");
+
     match download(&formatted_url, &formatted_path) {
         Ok(_meow) => {
             // run_command(src_dir_str, "bash", &["-c", &formatted_prepare_fn]).expect("oopsies");
@@ -94,6 +104,17 @@ fn download_pkgbuild(
             match run_command(src_dir_str, "sudo", &["bash", "-c", &formatted_build_fn]) {
                 // TODO maybe dont do sudo
                 Ok(_) => {
+                    run_command(
+                        src_dir_str,
+                        "sudo",
+                        &[
+                            "chown",
+                            "-Rv",
+                            &formatted_user_name,
+                            formatted_path.to_str().unwrap(), // TODO
+                        ],
+                    )
+                    .expect("Owned by root"); // TODO
                     println!("=> \x1b[32;1mSUC:\x1b[0m Running package() function!");
                     run_command(src_dir_str, "sudo", &["bash", "-c", &formatted_pkg_fn])
                         .expect("=> \x1b[31;1mERR: Failed to run command..");
@@ -137,30 +158,26 @@ fn make(pkgbuild_path: &Path, src_dir: &Path) {
 
     let pkgnames: Vec<&str> = Vec::from_iter(e_pkgname.splitn(32usize, " ")); // TODO: resize, 0usize doesn't work.
 
-    if !pkgnames.is_empty() {
-        for i in pkgnames.iter() {
-            let formatted_pkgname = format_pkgbuild(i, &content, src_dir_str, i);
+    for i in pkgnames.iter() {
+        let formatted_pkgname = format_pkgbuild(i, &content, src_dir_str, i);
 
-            let pkg_fn_name;
-            let fmt_name = format!("package_{formatted_pkgname}");
+        let pkg_fn_name;
+        let fmt_name = format!("package_{formatted_pkgname}");
 
-            if let Some(_pkg) = result.functions.get("package") {
-                println!("=> \x1b[32;1mSUC:\x1b[0m Found package()!");
-                pkg_fn_name = "package";
+        if let Some(_pkg) = result.functions.get("package") {
+            println!("=> \x1b[32;1mSUC:\x1b[0m Found package()!");
+            pkg_fn_name = "package";
 
-                download_pkgbuild(pkg_fn_name, url, &content, src_dir_str, i);
-            } else {
-                println!(
-                    "=> \x1b[33;1mTRY:\x1b[0m Trying package_{}()",
-                    formatted_pkgname
-                );
-                pkg_fn_name = &fmt_name;
+            download_pkgbuild(pkg_fn_name, url, &content, src_dir_str, i);
+        } else {
+            println!(
+                "=> \x1b[33;1mTRY:\x1b[0m Trying package_{}()",
+                formatted_pkgname
+            );
+            pkg_fn_name = &fmt_name;
 
-                download_pkgbuild(pkg_fn_name, url, &content, src_dir_str, i);
-            }
+            download_pkgbuild(pkg_fn_name, url, &content, src_dir_str, i);
         }
-    } else {
-        println!("NO PKGVEC")
     }
 }
 

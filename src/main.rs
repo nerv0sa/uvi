@@ -4,8 +4,8 @@
 
 use clap::Parser;
 use git2::Repository;
-
 use reqwest::blocking;
+use rprompt::prompt_reply;
 use std::{
     env,
     fs::{File, remove_dir_all},
@@ -80,7 +80,7 @@ pub fn fetch_env(target_env: &str) -> PathBuf {
     current
 }
 
-fn add_pkg(pkg_name: &str) {
+fn add_pkg(pkg_name: Vec<(String, String)>) {
     println!("hi!");
 }
 
@@ -211,13 +211,15 @@ fn git_repo(
         );
 
         if destination.exists() {
-            println!(
-                "=> \x1b[31;1mERR:\x1b[0m Destination already exists..\n=> \x1b[33;1mTRY:\x1b[0m Replace destination? [Y/n]"
-            ); // TODO: make work
+            let delete_prompt = prompt_reply(
+                "=> \x1b[31;1mERR:\x1b[0m Destination already exists..\n=> \x1b[33;1mTRY:\x1b[0m Replace destination? [Y/n]: ",
+            ).expect("Y");
 
-            sleep(Duration::from_secs_f32(2.0));
+            if delete_prompt != "n" {
+                println!("=> \x1b[33;1mTRY:\x1b[0m Deleting destination..");
 
-            remove_dir_all(destination).expect("Failed to remove destination..");
+                remove_dir_all(destination).expect("Failed to remove destination..");
+            }
 
             match Repository::clone(url, destination) {
                 Ok(repo) => {
